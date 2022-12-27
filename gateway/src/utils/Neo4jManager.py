@@ -64,9 +64,9 @@ class Neo4jConnection:
 
 class Neo4jManager():
     def __init__(self):
-        self.url = os.environ.get('NEO4J_URL')
-        self.username = os.environ.get('NEO4J_USERNAME')
-        self.password = os.environ.get('NEO4J_PASSWORD')
+        self.url = os.environ.get('URL_NEO4J')
+        self.username = os.environ.get('USERNAME_NEO4J')
+        self.password = os.environ.get('PASSWORD_NEO4J')
         self.neo4j_conn = Neo4jConnection(uri=self.url,
                                           user=self.username,
                                           pwd=self.password)

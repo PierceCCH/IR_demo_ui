@@ -101,13 +101,11 @@ services:
     ports:
       - ${KIBANA_H_PORT}:${KIBANA_C_PORT}
 
-
-
   weaviate:
     image: semitechnologies/weaviate:${WEAVIATE_VERSION}
     ports:
-    - ${WEAVIATE_H_PORT}:${WEAVIATE_C_PORT}
-    - ${PROMETHEUS_H_PORT}:${WEAVIATE_C_PORT}
+      - ${WEAVIATE_H_PORT}:${WEAVIATE_C_PORT}
+      - ${PROMETHEUS_H_PORT}:${PROMETHEUS_C_PORT}
     restart: on-failure:0
     volumes:
       - ../vector_db/var/weaviate:/var/lib/weaviate
@@ -118,3 +116,21 @@ services:
       DEFAULT_VECTORIZER_MODULE: 'none'
       CLUSTER_HOSTNAME: 'node1'
       PROMETHEUS_MONITORING_ENABLED: 'true'
+
+  neo4j:
+    build: ../neo4j
+    stdin_open: true
+    tty: true
+    environment:
+      NEO4J_AUTH: ${NEO4J_USERNAME}/${NEO4J_PASSWORD}
+      URL_NEO4J: ${NEO4J_URL}
+      PASSWORD_NEO4J: ${NEO4J_PASSWORD}
+      USERNAME_NEO4J: ${NEO4J_USERNAME}
+    ports:
+      - ${NEO4J_BOLT_PORT}:${NEO4J_BOLT_PORT}
+      - ${NEO4J_HTTP_PORT}:${NEO4J_HTTP_PORT}
+    volumes:
+      - ../gateway/src:/src
+    ulimits:
+      memlock: -1 # set upper limit for how much memory is locked for the container (-1 means lock as much as the container uses)
+    shm_size: 32gb # set upper limit for how much shared memory container can use
