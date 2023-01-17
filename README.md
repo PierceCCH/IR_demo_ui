@@ -157,7 +157,7 @@ docker exec -it ir_template_gateway_1 /bin/bash
     - Creates document within the collection. 
     - **Parameters**:
         - **collection_name**: Name of the collection
-        - **documents**: Dictionary containing all the fields and its value for the document to be created. For bulk uploading, consolidate documents in a list before passing it as documents.
+        - **documents**: Dictionary containing all the fields and its value for the document to be created. For bulk uploading, consolidate documents in a list before passing it as documents. For Weaviate, include field `vector` to upload embeddings. Supported data type for `vector` includes `numpy.ndarray`, `torch.Tensor` and `List`. 
         - **id_field** (ElasticSearch): Specify the field from the documents to use as the internal id value. If no field is indicated, then ElasticSearch's generated id will be used instead. 
 
 - ```delete_document(collection_name: str, doc_id: str)```
