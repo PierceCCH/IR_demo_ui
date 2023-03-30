@@ -345,7 +345,8 @@ class DocManager():
 
         Args:
             collection_name (str): Index name of ES
-            field_value_dict (dict): A dictionary with the field to be queried as the key, and the value to be queried as the value of the dictionary
+            field_value_dict (dict): A dictionary with the field to be queried as the key, and the value to be queried as the value of the dictionary. 
+                                    example: {"field1":"query1", "field2", "query2"}
 
         Returns:
             dict: response of error along with the faulty document, or code 200 along with the list of retrieved document
@@ -357,9 +358,14 @@ class DocManager():
             return {"response": "Type of 'field_value_dict' is not dict"}
 
         # Check for document's existence
-        field_value_dict = self._flatten(field_value_dict)
-        search_result = self.client.search(index=collection_name, query={
-                                           "match": field_value_dict})
+        reorg_dict = {"bool":{
+            "should":[]
+            }
+        }
+        for field in field_value_dict:
+            reorg_dict['bool']['should'].append({"match":{field:field_value_dict[field]}})
+
+        search_result = self.client.search(index=collection_name, query=reorg_dict)
         result_count = search_result['hits']['total']['value']
 
         if result_count == 0:
