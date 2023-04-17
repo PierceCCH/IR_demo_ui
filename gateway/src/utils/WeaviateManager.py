@@ -180,7 +180,7 @@ class VectorManager:
                             example shape:  'Faces'
         schema:             Schema for each document
                             example: {
-                                "doc_id": ["text"],
+                                "doc_id": str,
                             }
 
         RETURNS: 
