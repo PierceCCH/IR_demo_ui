@@ -285,8 +285,6 @@ class DocManager():
             return {"response": f"Document '{doc_id}' not found, create document first"}
 
         try:
-            resp = self.client.update(
-                index=collection_name, id=doc_id, doc=document)
             for key in document.keys():
 
                 q = {

@@ -245,17 +245,17 @@ class VectorManager:
                 doc.pop('vector')
             try:
                 self._client.data_object.create(
-                doc,
-                collection_name,
-                vector = embedding
+                    doc,
+                    collection_name,
+                    vector = embedding
                 )
-                return {'response': "200"}
             except Exception as e:
                 if "vector lengths don't match" in str(e):
                     self.delete_document(collection_name, doc['doc_id'])
                     return {'response':"Mismatch vector length, creation failed"}
                 else:
                     return {'response': f"{e}"}
+            return {'response': "200"}
 
     def read_document(self, collection_name: str, doc_id: str) -> dict:
         """
