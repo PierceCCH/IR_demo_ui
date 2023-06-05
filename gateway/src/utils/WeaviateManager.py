@@ -255,7 +255,7 @@ class VectorManager:
                     return {'response':"Mismatch vector length, creation failed"}
                 else:
                     return {'response': f"{e}"}
-            return {'response': "200"}
+        return {'response': "200"}
 
     def read_document(self, collection_name: str, doc_id: str) -> dict:
         """
