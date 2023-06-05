@@ -283,6 +283,8 @@ class DocManager():
 
         if result_count == 0:
             return {"response": f"Document '{doc_id}' not found, create document first"}
+        
+        document = self._flatten(document)
 
         try:
             for key in document.keys():
