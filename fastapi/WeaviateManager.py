@@ -114,7 +114,7 @@ class VectorManager:
         collection_name = collection_name.capitalize()
         where_filter = {
             'operator': 'Equal',
-            'valueText': doc_id,
+            'valueText': doc_id, # error is here ??
             'path': ['doc_id']
         }
         response = self._client.query.get(collection_name, ["doc_id", "_additional {id}"]).with_where(where_filter).do()
@@ -154,7 +154,7 @@ class VectorManager:
         doc_id:              id of document
                             example: "72671"
 
-        RETURNS: 
+        RETURNS: with
         ------------------------------------
         dict:               Dictionary with the success code 200 or errors
                             example: {'response': "200"}
@@ -235,7 +235,7 @@ class VectorManager:
             # Check if the id exist
             id_exists = self._exists(collection_name, doc['doc_id'])
             if id_exists:
-                return {'response': 'This id already existed, please use update instead'}
+                return {'response': 'This id already exists, please use update instead'}
             # Create document
             if "vector" in doc:
                 valid_vec_type = [numpy.ndarray, torch.Tensor, list]
@@ -256,6 +256,69 @@ class VectorManager:
                 else:
                     return {'response': f"{e}"}
         return {'response': "200"}
+
+    def batch_create_documents(self, collection_name: str, documents: Union[list, dict]) -> dict:
+        """
+        Batch create documents in a specified collection to reduce the time taken to create a large set of documents
+
+        INPUT: 
+        ------------------------------------
+        collection_name:    Name of collection
+                            example shape:  'Faces'
+        documents:          Schema for the document. To update embedding, include 'vector' key in the dict. 
+                            example: {
+                                "doc_id": "72671",
+                                "vector": []
+                            }
+
+        RETURNS: 
+        ------------------------------------
+        dict:               Dictionary with the success code 200 or errors
+                            example: {'response': "200"}
+
+        """
+        collection_name = collection_name.capitalize()
+        if type(documents) == dict or len(documents) == 1:
+            return self.create_document(collection_name, documents)
+        
+        self._client.batch.configure(
+            batch_size = 40,
+            dynamic = False,
+            connection_error_retries = 3,
+            timeout_retries = 3,
+            callback = weaviate.util.check_batch_result
+        )
+
+        with self._client.batch as batch:
+            for i, doc in enumerate(documents):
+                embedding=None
+                # Check if the doc_id attribute exist
+                if not doc.get('doc_id'):
+                    return {'response': f'Lack of doc_id as an attribute in property for doc {i}'}
+                # Check if the id exist
+                id_exists = self._exists(collection_name, doc['doc_id'])
+                if id_exists:
+                    return {'response': f'This id ({doc["doc_id"]}) already exists, please use update instead'}
+                
+                if "vector" in doc:
+                    valid_vec_type = [numpy.ndarray, torch.Tensor, list]
+                    if not type(doc['vector']) in valid_vec_type:
+                        return {'response': "Invalid vector type. Supported vector types: numpy.ndarray, torch.Tensor, list"}
+                    embedding=doc['vector']
+                    doc.pop('vector')
+                
+                try:
+                    # Batch auto-creates when full. 
+                    # Last batch automatically added at end of `with` block
+                    batch.add_data_object(doc, collection_name, vector = embedding)
+                except Exception as e:
+                    if "vector lengths don't match" in str(e):
+                        print(f'response: Mismatch vector length, creation failed')
+                    else:
+                        return {'response': f"{e}"}
+                    
+        return {'response': "200"}
+
 
     def read_document(self, collection_name: str, doc_id: str) -> dict:
         """
@@ -284,7 +347,7 @@ class VectorManager:
     
     def get_top_k(self, collection_name: str, target_embedding: Union[list, numpy.ndarray, torch.Tensor], top_k: int = 1) -> dict:
         """
-        Return the dictionary with the response key holding the list of near documents
+        Return the dictionary with the response key holding the list of near documents with certainty of at least 0.7
 
         INPUT: 
         ------------------------------------
@@ -315,8 +378,13 @@ class VectorManager:
         collection_name = collection_name.capitalize()
         if top_k < 1:
             return {'response': 'Invalid top_k'}
-        query_vector = {'vector': target_embedding}
-        res = self._client.query.get(collection_name, ["doc_id", "_additional {certainty, id}"]).with_near_vector(query_vector).do()
+        query_vector = {'vector': target_embedding, 'certainty': 0.7}
+        res = (
+            self._client.query
+               .get(collection_name, ["doc_id", "_additional {certainty, id}"])
+               .with_near_vector(query_vector)
+               .do()
+            )
         if 'errors' in res:
             return {'response': res['errors']}
         try:
@@ -325,6 +393,68 @@ class VectorManager:
             top_results = [ self.read_document(collection_name, document['doc_id']) for document in top_id]
             for document, res in zip(top_id, top_results):
                 res['certainty'] = document['_additional']['certainty']
+            return {'response': top_results}
+        except Exception as e:
+            return {'response': f'{e}'}
+        
+    def get_top_k_by_hybrid(self, collection_name: str, query_string: str, target_embedding: Union[list, numpy.ndarray, torch.Tensor], top_k: int = 1) -> dict:
+        """
+        Return the dictionary with the response key holding the list of near documents
+
+        INPUT: 
+        ------------------------------------
+        collection_name:    Name of collection
+                            example shape:  'Faces'
+        query_string:       Query string for bm25 text similarity search
+                            example: "a dog standing next to an orange cat"
+        target_embedding:   Query embedding to find document with high cosine similarity
+                            example: torch.Tensor([0.5766745, 0.9341823, 0.7021697, 0.54776406, 0.013553977])
+        top_k:              integer value for the number of documents to return. Default is 1
+                            example: 3
+
+        RETURNS: 
+        ------------------------------------
+        dict:               Dictionary with list or errors
+                            example: {
+                                response: [{
+                                    'class': 'Faces',
+                                    'creationTimeUnix': 1671076617122,
+                                    'id': '9d62d87b-bb17-4736-8714-e1455ffa2b01',
+                                    'lastUpdateTimeUnix': 1671076617122,
+                                    'properties': {'doc_id': '11', 'new': '2'},
+                                    'vector': [0.5766745, 0.9341823, 0.7021697, 0.54776406, 0.013553977],
+                                    'vectorWeights': None,
+                                    'certainty': 0.9999999403953552
+                                }]
+                            }
+                            
+        """
+        collection_name = collection_name.capitalize()
+        if top_k < 1:
+            return {'response': 'Invalid top_k'}
+        
+        query_vector = target_embedding[0].tolist() # with_hybrid wants the vector as a list
+        res = (
+            self._client.query
+               .get(collection_name, ["doc_id"])
+               .with_hybrid(
+                    query_string,
+                    vector=query_vector, 
+                    alpha=0.5, # An alpha of 1 is pure vector search, 0 is pure keyword search
+                    properties = ["text"]
+                )
+               .with_additional(["score"])
+               .with_autocut(2)
+               .do()
+            )
+        if 'errors' in res:
+            return {'response': res['errors']}
+        try:
+            limit = min(top_k, len(res['data']['Get'][collection_name]))
+            top_id = res['data']['Get'][collection_name][:limit]
+            top_results = [ self.read_document(collection_name, document['doc_id']) for document in top_id]
+            for document, res in zip(top_id, top_results):
+                res['score'] = document['_additional']['score']
             return {'response': top_results}
         except Exception as e:
             return {'response': f'{e}'}
@@ -364,7 +494,6 @@ class VectorManager:
             temp = copy.deepcopy(document)
             if 'vector' in document.keys():
                 new_vector = temp['vector']
-                del temp['doc_id']
                 del temp['vector']
                 previous_vector = self._client.data_object.get_by_id(uuid = uuid['uuid'], class_name = collection_name, with_vector = True)['vector']
                 try:
@@ -383,7 +512,6 @@ class VectorManager:
                     else:
                         return {'response': f'{e}'}
             else:
-                del temp['doc_id']
                 try:
                     self._client.data_object.update(
                         data_object = temp, 
