@@ -1,108 +1,10 @@
 version: '3.4'
 
-volumes:
-  elasticsearch-data:
-
-secrets:
-  elasticsearch.keystore:
-    file: ../elastdocker/secrets/keystore/elasticsearch.keystore
-  elasticsearch.service_tokens:
-    file: ../elastdocker/secrets/service_tokens
-  elastic.ca:
-    file: ../elastdocker/secrets/certs/ca/ca.crt
-  elasticsearch.certificate:
-    file: ../elastdocker/secrets/certs/elasticsearch/elasticsearch.crt
-  elasticsearch.key:
-    file: ../elastdocker/secrets/certs/elasticsearch/elasticsearch.key
-  kibana.certificate:
-    file: ../elastdocker/secrets/certs/kibana/kibana.crt
-  kibana.key:
-    file: ../elastdocker/secrets/certs/kibana/kibana.key
-
 services:
-  elasticsearch:
-    image: elastdocker/elasticsearch:${ELK_VERSION}
-    restart: unless-stopped
-    # env_file:
-    # - ./.env
-    environment:
-      ELASTIC_USERNAME: ${ELASTIC_USERNAME}
-      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
-      ELASTIC_CLUSTER_NAME: ${ELASTIC_CLUSTER_NAME}
-      ELASTIC_NODE_NAME: ${ELASTIC_NODE_NAME}
-      ELASTIC_INIT_MASTER_NODE: ${ELASTIC_INIT_MASTER_NODE}
-      ELASTIC_DISCOVERY_SEEDS: ${ELASTIC_DISCOVERY_SEEDS}
-      ES_JAVA_OPTS: "-Xmx${ELASTICSEARCH_HEAP} -Xms${ELASTICSEARCH_HEAP} -Des.enforce.bootstrap.checks=true -Dlog4j2.formatMsgNoLookups=true"
-      bootstrap.memory_lock: "true"
-    volumes:
-      - elasticsearch-data:/usr/share/elasticsearch/data
-      - ../elastdocker/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
-      - ../elastdocker/elasticsearch/config/log4j2.properties:/usr/share/elasticsearch/config/log4j2.properties
-      - ../elastdocker/backup:/backup
-    secrets:
-      - source: elasticsearch.keystore
-        target: /usr/share/elasticsearch/config/elasticsearch.keystore
-      - source: elasticsearch.service_tokens
-        target: /usr/share/elasticsearch/config/service_tokens
-      - source: elastic.ca
-        target: /usr/share/elasticsearch/config/certs/ca.crt
-      - source: elasticsearch.certificate
-        target: /usr/share/elasticsearch/config/certs/elasticsearch.crt
-      - source: elasticsearch.key
-        target: /usr/share/elasticsearch/config/certs/elasticsearch.key
-    ports:
-      - ${ELASTICSEARCH_H_PORT}:${ELASTICSEARCH_C_PORT}
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-      nofile:
-        soft: 200000
-        hard: 200000
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "sh",
-          "-c",
-          "curl -sf --insecure https://$ELASTIC_USERNAME:$ELASTIC_PASSWORD@localhost:9200/_cat/health | grep -ioE 'green|yellow' || echo 'not green/yellow cluster status'"
-        ]
-
-  gateway:
-    build: ../gateway
-    stdin_open: true
-    tty: true
-    env_file:
-      - .env
-    volumes:
-      - ../gateway/src:/src
-      - ../data:/data
-    ports:
-      - 8888:8888
-
-  kibana:
-    image: elastdocker/kibana:${ELK_VERSION}
-    restart: unless-stopped
-    volumes:
-      - ../elastdocker/kibana/config/:/usr/share/kibana/config:ro
-    environment:
-      ELASTIC_USERNAME: ${ELASTIC_USERNAME}
-      ELASTIC_PASSWORD: ${ELASTIC_PASSWORD}
-      ELASTICSEARCH_HOST_PORT: https://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_C_PORT}
-    env_file:
-      - ../elastdocker/secrets/.env.kibana.token
-    secrets:
-      - source: elastic.ca
-        target: /certs/ca.crt
-      - source: kibana.certificate
-        target: /certs/kibana.crt
-      - source: kibana.key
-        target: /certs/kibana.key
-    ports:
-      - ${KIBANA_H_PORT}:${KIBANA_C_PORT}
-
   weaviate:
     image: semitechnologies/weaviate:${WEAVIATE_VERSION}
+    networks:
+      - deploy_network
     ports:
       - ${WEAVIATE_H_PORT}:${WEAVIATE_C_PORT}
       - ${PROMETHEUS_H_PORT}:${PROMETHEUS_C_PORT}
@@ -116,21 +18,30 @@ services:
       DEFAULT_VECTORIZER_MODULE: 'none'
       CLUSTER_HOSTNAME: 'node1'
       PROMETHEUS_MONITORING_ENABLED: 'true'
-
-  neo4j:
-    build: ../neo4j
-    stdin_open: true
-    tty: true
-    environment:
-      NEO4J_AUTH: ${NEO4J_USERNAME}/${NEO4J_PASSWORD}
-      URL_NEO4J: ${NEO4J_URL}
-      PASSWORD_NEO4J: ${NEO4J_PASSWORD}
-      USERNAME_NEO4J: ${NEO4J_USERNAME}
-    ports:
-      - ${NEO4J_BOLT_PORT}:${NEO4J_BOLT_PORT}
-      - ${NEO4J_HTTP_PORT}:${NEO4J_HTTP_PORT}
+  
+  fastapi:
+    build: ../fastapi
+    env_file:
+      - .env
     volumes:
-      - ../gateway/src:/src
-    ulimits:
-      memlock: -1 # set upper limit for how much memory is locked for the container (-1 means lock as much as the container uses)
-    shm_size: 32gb # set upper limit for how much shared memory container can use
+      - ../data:/data
+      - ../fastapi:/fastapi
+    ports: 
+      - ${FASTAPI_H_PORT}:${FASTAPI_C_PORT}
+    networks:
+      - deploy_network
+    container_name: fastapi
+
+  streamlit:
+    build: ../streamlit
+    depends_on:
+      - fastapi
+    ports: 
+        - ${STREAMLIT_H_PORT}:${STREAMLIT_C_PORT}
+    networks:
+      - deploy_network
+    container_name: streamlit
+
+networks:
+  deploy_network:
+    driver: bridge

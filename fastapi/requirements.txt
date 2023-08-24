@@ -1,0 +1,15 @@
+fastapi==0.77.1 # FastAPI
+uvicorn==0.17.6 # FastAPI
+numpy==1.23.5
+pyyaml==6.0
+torch==1.13.0
+requests==2.28.1
+weaviate-client==3.22.1
+timm==0.4.12
+tqdm
+fairscale==0.4.4
+Pillow
+scipy
+scikit-learn
+transformers
+datasets
