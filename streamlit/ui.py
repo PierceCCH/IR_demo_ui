@@ -1,3 +1,5 @@
+from PIL import Image
+
 import streamlit as st
 import requests
 import os
@@ -21,7 +23,7 @@ with inputs_col:
     image_file = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
 
 with config_col:
-    model = st.selectbox("Select model", ["BERT", "ResNet50"])
+    model = st.selectbox("Select model", ["ALIGN & MLP", "ALIGN"])
     num_results = st.slider("Number of results per modality", min_value=1, max_value=25, value=10)
     request_body = {
         "query": text_input, 
@@ -58,24 +60,29 @@ with st.spinner("Waiting for results..."):
                 st.subheader("Text results:")
                 for article in text_results:
                     document = article['response']['properties']
-                    score = article['score']
                     doc_id = document['doc_id']
+                    article_path = document['article']
+                    score = article['score']
                     text = document['text']
 
-                    st.write(text)
-
+                    with st.expander(f"ID: {doc_id} | {article_path} | Score: {score[:5]}"):
+                        st.write(text)
+            
             with image_results_col:
                 st.subheader("Image results:")
-                for image in image_results:
-                    document = image['response']['properties']
-                    score = image['score']
-                    doc_id = document['doc_id']
-                    image = document['image']
-                    caption = document['text']
+                tabs = st.tabs([f"Image {str(i+1)}" for i in range(len(image_results))])
+                for i, tab in enumerate(tabs):
+                    with tab:
+                        document = image_results[i]['response']['properties']
+                        score = image_results[i]['score']
+                        doc_id = document['doc_id']
+                        image = document['image']
+                        caption = document['text']
 
-                    # open and display image
-                    img = open(os.path.join("./data/m2e2/image/image", image), 'rb')
-                    st.image(img, caption=caption, use_column_width=True)
+                        st.subheader(f"ID: {doc_id} | Score: {score[:5]}")
+                        # open and display image
+                        img = Image.open(os.path.join("../data/m2e2/image/image", image))
+                        st.image(img, caption=caption, use_column_width=True)
 
         except NameError:
             st.write("No results yet.")

@@ -48,6 +48,8 @@ async def query_top_k_documents(query: str, top_k: int = 10, model: str = "BERT"
 
         # TODO: Image query
 
+        # TODO: include a cutoff for a certain score
+
         return {"text_results": text_res, "image_results": image_res}
     
     except Exception as e:
