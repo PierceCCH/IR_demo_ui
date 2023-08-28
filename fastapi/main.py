@@ -1,7 +1,8 @@
 from WeaviateManager import VectorManager
 from models import generate_query
+from typing import Optional
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, File, UploadFile
 
 app = FastAPI(
     title="Multi-modal search demo",
@@ -24,7 +25,7 @@ def read_root():
 Querying
 """
 @app.post("/query_top_k_documents")
-async def query_top_k_documents(query: str, top_k: int = 10, model: str = "BERT"):
+async def query_top_k_documents(query: Optional[str] = None, top_k: int = 10, model: str = "ALIGN", files: Optional[UploadFile] = File(None)):
     """
     Query the collection for the top k most similar documents
     
@@ -36,24 +37,23 @@ async def query_top_k_documents(query: str, top_k: int = 10, model: str = "BERT"
     Returns:
         response (dict): Dictionary containing the results
     """
-    # body = await request.json()
-    # query = body["query"]
-    # top_k = body["top_k"]
-
     try:
         # Text query
-        query_embedding, query = generate_query(query)
-        text_res = VecMgr.get_top_k_by_hybrid(TEXT_COLLECTION_NAME, query, query_embedding, top_k)
-        image_res = VecMgr.get_top_k_by_hybrid(IMAGE_COLLECTION_NAME, query, query_embedding, top_k)
+        if query is not None:
+            query_embedding, query_text = generate_query("text", query) # TODO: include model parameter
+        else:
+            image_content = files.file.read()
+            query_embedding, query_text = generate_query("image", image_content) # TODO: include model parameter
 
-        # TODO: Image query
+        text_res = VecMgr.get_top_k_by_hybrid(TEXT_COLLECTION_NAME, query_text, query_embedding, top_k)
+        image_res = VecMgr.get_top_k_by_hybrid(IMAGE_COLLECTION_NAME, query_text, query_embedding, top_k)
 
         # TODO: include a cutoff for a certain score
 
         return {"text_results": text_res, "image_results": image_res}
     
     except Exception as e:
-        return e
+        return {f"Error handling query: {e}. File: {files}"}
 
 
 '''

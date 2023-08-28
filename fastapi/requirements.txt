@@ -13,3 +13,4 @@ scipy
 scikit-learn
 transformers
 datasets
+python-multipart

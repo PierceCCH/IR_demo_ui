@@ -11,6 +11,7 @@ from models.ram import get_transform
 from PIL import Image
 import torch
 import os
+import io
 
 RAM_WEIGHTS = os.path.join(os.path.dirname(__file__), 'weights/ram_swin_large_14m.pth')
 T2T_WEIGHTS = os.path.join(os.path.dirname(__file__), 'weights/tag2text_swin_14m.pth')
@@ -64,12 +65,19 @@ def generate_caption(ram, t2t, image_path, device):
         print(f"Error: {e}")
         return None
 
-def generate_query(query, model=align_model, ram=ram_model, t2t=t2t_model, device=device):
-    if (os.path.exists(query)):
-        image = Image.open(query)
-        caption = generate_caption(ram, t2t, query, device)
+def generate_query(modality: str, query, model=align_model, ram=ram_model, t2t=t2t_model, device=device):
+    
+    # TODO: Have variable model select
+
+    if modality == "image":
+        image = Image.open(io.BytesIO(query))
+        caption = generate_caption(ram, t2t, image, device)
         return model.get_single_image_embedding(image), caption
     
-    return model.get_single_text_embedding(query), query
+    elif modality == "text":
+        return model.get_single_text_embedding(query), query
+    
+    else:
+        raise ValueError(f"Invalid modality: {modality}")
 
 print("Models loaded") # TODO: Replace with logger
