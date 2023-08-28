@@ -1,8 +1,7 @@
 from WeaviateManager import VectorManager
 from models import generate_query
-from typing import Union, List
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
 app = FastAPI(
     title="Multi-modal search demo",
@@ -13,27 +12,53 @@ app = FastAPI(
 
 VecMgr = VectorManager()
 
-# Schemas
-article_db_schema = {
-    "doc_id": "str",
-    "text": "str",
-    "article": "str"
-}
-image_db_schema = {
-    "doc_id": "str",
-    "text": "str",
-    "image": "str"
-}
+TEXT_COLLECTION_NAME = 'ALIGN_M2E2_articles'
+IMAGE_COLLECTION_NAME = 'ALIGN_M2E2_images'
 
-# TODO: Define response schema
 
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
 
+"""
+Querying
+"""
+@app.post("/query_top_k_documents")
+async def query_top_k_documents(query: str, top_k: int = 10, model: str = "BERT"):
+    """
+    Query the collection for the top k most similar documents
+    
+    Args:
+        collection (str): Name of the collection
+        query (str): Query string
+        k (int): Number of results to return
+
+    Returns:
+        response (dict): Dictionary containing the results
+    """
+    # body = await request.json()
+    # query = body["query"]
+    # top_k = body["top_k"]
+
+    try:
+        # Text query
+        query_embedding, query = generate_query(query)
+        text_res = VecMgr.get_top_k_by_hybrid(TEXT_COLLECTION_NAME, query, query_embedding, top_k)
+        image_res = VecMgr.get_top_k_by_hybrid(IMAGE_COLLECTION_NAME, query, query_embedding, top_k)
+
+        # TODO: Image query
+
+        return {"text_results": text_res, "image_results": image_res}
+    
+    except Exception as e:
+        return e
+
+
 '''
+
+"""
 Collection management
-'''
+"""
 @app.post("/create_collection")
 def create_collection(collection: str):
     """
@@ -67,9 +92,9 @@ def delete_collection(collection: str):
         return e
 
 
-'''
+"""
 Document management
-'''
+"""
 @app.post("/add_document")
 def add_document(collection: str, documents: Union[list, dict]):
     """
@@ -123,27 +148,5 @@ def delete_document(collection: str, document_id: str):
         return res
     except Exception as e:
         return e
-    
 
 '''
-Querying
-'''
-@app.get("/query_top_k_documents")
-def query_top_k_documents(collection: str, query: str, top_k: int = 10):
-    """
-    Query the collection for the top k most similar documents
-    
-    Args:
-        collection (str): Name of the collection
-        query (str): Query string
-        k (int): Number of results to return
-
-    Returns:
-
-    """
-    try:
-        query_embedding, query = generate_query(query)
-        res = VecMgr.get_top_k_by_hybrid(collection, query, query_embedding, top_k)
-        return res
-    except Exception as e:
-        return e

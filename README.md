@@ -29,14 +29,13 @@ $ ./start.sh
 View the demo at http://localhost:8501. FastAPI docs can be viewed at http://localhost:8000/docs.
 
 # Todos:
-- [ ] Test query API
 - [ ] Build demo frontend to include:
     - [ ] Image search
-    - [ ] Text search
     - [ ] Model selection
-    - [ ] Adding new data
-    - [ ] Embedding visualization
+    - [x] Text search
+    - [x] Top k selection
 - [ ] Error handling
+- [x] Query API
 - [x] Setup environment for FastAPI server and weaviate database
 
 # Architecture
