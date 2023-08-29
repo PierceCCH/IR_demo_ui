@@ -2,6 +2,7 @@ from PIL import Image
 
 import streamlit as st
 import requests
+import json
 import os
 
 # Define FastAPI endpoint
@@ -48,9 +49,10 @@ if page == "Search":
                 try:
                     if image_file is not None:
                         files = {
-                            "image": image_file
+                            "image_file": image_file
                         }
                         response = requests.post(BACKEND, params=request_body, files=files)
+                        st.write(response.json())
                     elif len(text_input) > 0:
                         response = requests.post(BACKEND, params=request_body)
                     else:
@@ -64,7 +66,6 @@ if page == "Search":
         text_results_col, image_results_col = st.columns(2, gap="large")
 
         try:
-            st.write(response.json())
             text_results = response.json().get("text_results")['response']
             image_results = response.json().get("image_results")['response']
 
@@ -102,17 +103,19 @@ if page == "Search":
 
 
 elif page == "Articles":
-    st.title("Articles")
-    st.subheader("Browse all articles that are available in the database.")
     articles = os.listdir(ARTICLES_PATH)
     articles.sort()
+    st.title("Articles")
+    st.subheader("Browse all articles that are available in the database.")
 
+    # For pagination
     num_entries = 10
-    page_num = st.number_input("Page number", min_value=1, max_value=(len(articles) // 10) + 1, value=1)
+    page_num = st.number_input("Page number", min_value=1, max_value=(len(articles) // num_entries) + 1, value=1)
     start_idx = (page_num - 1) * num_entries
     end_idx = start_idx + num_entries
+    st.divider()
 
-    # Display articles
+    # Display articles by page
     for article in articles[start_idx:end_idx]:
         with st.expander(article):
             with open(os.path.join(ARTICLES_PATH, article), "r") as f:
@@ -120,21 +123,24 @@ elif page == "Articles":
 
 
 elif page == "Images":
-    st.title("Images")
-    st.subheader("Browse all images that are available in the database.")
     images = os.listdir(IMAGES_PATH)
-    captions = os.listdir(os.path.join(IMAGES_PATH, "image_url_caption.json"))
+    captions = json.loads(open(os.path.join("../data/m2e2/image", "image_url_caption.json"), "r").read())
     images.sort()
 
+    st.title("Images")
+    st.subheader("Browse all images that are available in the M2E2 dataset.")
+    st.write("Dataset is stored locally under `/data/m2e2/`.")
+    
+    # For pagination
     num_entries = 10
-    page_num = st.number_input("Page number", min_value=1, max_value=(len(images) // 10) + 1, value=1)
+    page_num = st.number_input("Page number", min_value=1, max_value=(len(images) // num_entries) + 1, value=1)
     start_idx = (page_num - 1) * num_entries
     end_idx = start_idx + num_entries
-
     page_images = images[start_idx:end_idx]
-    tabs = st.tabs([f"Image {str(i+1)}" for i in range(len(page_images))])
+    st.divider()
 
-    # Display images
+    # Display images by page
+    tabs = st.tabs([f"Image {str(i+1)}" for i in range(len(page_images))])
     for i, tab in enumerate(tabs):
         with tab:
             image_col, caption_col = st.columns(2)
@@ -143,7 +149,7 @@ elif page == "Images":
             with image_col:
                 st.image(img, width=500)
             with caption_col:
-                image_key = image[:-6]
+                image_key = image[:-6] # This is specific to the M2E2 dataset
                 image_index = image[-5]
                 st.subheader(image)
                 try:
@@ -151,6 +157,11 @@ elif page == "Images":
                     st.write(caption)
                 except KeyError:
                     st.write("No caption available.")
+
+elif page == "Documentation":
+    st.title("Documentation")
+    st.subheader("This is a demo for the Multi-modal Search project.")
+    st.write("TODO: Add documentation")
 
 else:
     st.error("Something went wrong. You're not supposed to be here!")

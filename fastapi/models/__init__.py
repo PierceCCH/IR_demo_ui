@@ -62,15 +62,14 @@ def generate_caption(ram, t2t, image_path, device):
         return res
     
     except Exception as e:
-        print(f"Error: {e}")
-        return None
+        raise ValueError(f"Error generating caption: {e}")
 
 def generate_query(modality: str, query, model=align_model, ram=ram_model, t2t=t2t_model, device=device):
     
     # TODO: Have variable model select
 
     if modality == "image":
-        image = Image.open(io.BytesIO(query))
+        image = Image.open(query).convert('RGB')
         caption = generate_caption(ram, t2t, image, device)
         return model.get_single_image_embedding(image), caption
     

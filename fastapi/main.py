@@ -1,8 +1,10 @@
 from WeaviateManager import VectorManager
 from models import generate_query
 from typing import Optional
+from PIL import Image
+from io import BytesIO
 
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, UploadFile
 
 app = FastAPI(
     title="Multi-modal search demo",
@@ -25,7 +27,7 @@ def read_root():
 Querying
 """
 @app.post("/query_top_k_documents")
-async def query_top_k_documents(query: Optional[str] = None, top_k: int = 10, model: str = "ALIGN", files: Optional[UploadFile] = File(None)):
+async def query_top_k_documents(image_file: Optional[UploadFile], query: Optional[str] = None, top_k: int = 10, model: str = "ALIGN"):
     """
     Query the collection for the top k most similar documents
     
@@ -38,11 +40,10 @@ async def query_top_k_documents(query: Optional[str] = None, top_k: int = 10, mo
         response (dict): Dictionary containing the results
     """
     try:
-        # Text query
         if query is not None:
             query_embedding, query_text = generate_query("text", query) # TODO: include model parameter
         else:
-            image_content = files.file.read()
+            image_content = await image_file.file.read()
             query_embedding, query_text = generate_query("image", image_content) # TODO: include model parameter
 
         text_res = VecMgr.get_top_k_by_hybrid(TEXT_COLLECTION_NAME, query_text, query_embedding, top_k)
@@ -53,7 +54,7 @@ async def query_top_k_documents(query: Optional[str] = None, top_k: int = 10, mo
         return {"text_results": text_res, "image_results": image_res}
     
     except Exception as e:
-        return {f"Error handling query: {e}. File: {files}"}
+        return {f"Error handling query: {e}"}
 
 
 '''

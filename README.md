@@ -31,12 +31,11 @@ View the demo at http://localhost:8501. FastAPI docs can be viewed at http://loc
 # Todos:
 - [ ] Build demo frontend to include:
     - [ ] Image query search
-    - [ ] Model selection
+    - [ ] Model selection 
     - [x] Text query search
     - [x] Top k selection
     - [x] Browse everything in database
-- [ ] Error handling
-- [ ] Proper logging
+- [ ] Logging and error handling
 - [x] Query API
 - [x] Setup environment for FastAPI server and weaviate database
 
