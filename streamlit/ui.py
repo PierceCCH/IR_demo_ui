@@ -19,7 +19,7 @@ with inputs_col:
     modality = st.selectbox("Select query modality", ["Text", "Image"])
 
     if modality == "Text":
-        text_input = st.text_area("Enter text query", placeholder="Enter text query here")
+        text_input = st.text_input("Enter text query", placeholder="Enter text query here")
         image_file = None
     else:
         text_input = None
@@ -27,7 +27,7 @@ with inputs_col:
 
 with config_col:
     st.subheader("Configuration")
-    model = st.selectbox("Select model", ["ALIGN & MLP", "ALIGN"])
+    model = st.selectbox("Select model", ["ALIGN", "ALIGN + MLP", "ALIGN + Hybrid", "ALIGN + Hybrid + Split"])
     num_results = st.slider("Number of results per modality", min_value=1, max_value=25, value=10)
     request_body = {
         "query": text_input, 
