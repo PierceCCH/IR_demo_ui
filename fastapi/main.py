@@ -1,5 +1,5 @@
 from WeaviateManager import VectorManager
-from models import generate_query
+from models import generate_image_embedding, generate_text_embedding
 from typing import Optional
 from PIL import Image
 from io import BytesIO
@@ -27,34 +27,74 @@ def read_root():
 Querying
 """
 @app.post("/query_top_k_documents")
-async def query_top_k_documents(image_file: Optional[UploadFile], query: Optional[str] = None, top_k: int = 10, model: str = "ALIGN"):
+async def query_top_k_documents(text_query: Optional[str] = None, top_k: int = 10, image_file: Optional[UploadFile] = None, model: str = "ALIGN", alpha: float = 0.5):
     """
-    Query the collection for the top k most similar documents
+    Queries both article and image collections in the vector database for the top k documents of each collection most similar to the query.
     
-    Args:
-        collection (str): Name of the collection
-        query (str): Query string
-        k (int): Number of results to return
+    INPUT: 
+    ------------------------------------
+    text_query (Optional[str]): 
+                    Query string. Required only for text query.
 
-    Returns:
-        response (dict): Dictionary containing the results
+    top_k (int): 
+                    Number of results per modality to return.
+
+    image_file (Optional[UploadFile]): 
+                    Image file. Required only for image query.
+
+    model (str):    
+                    Model to use for query. 
+                    Options are "ALIGN", "ALIGN + MLP", "ALIGN + Hybrid", "ALIGN + Hybrid + Split".
+
+    alpha (float):  
+                    Weight of BM25 or vector search. 
+                    0 for pure keyword search, 1 for pure vector search.
+
+    RETURNS: 
+    ------------------------------------
+        dict:       Dictionary of results or error.
+                    example: {
+                        "text_results": [
+                            {
+                                "doc_id": doc_id,
+                                "score": score,
+                                "text": text
+                            },
+                            ...
+                        ],
+                        "image_results": [
+                            {
+                                "doc_id": doc_id,
+                                "score": score,
+                                "image": image
+                            },
+                            ...
+                        ]
+                    }
+
     """
-    try:
-        if query is not None:
-            query_embedding, query_text = generate_query("text", query) # TODO: include model parameter
-        else:
-            image_content = await image_file.file.read()
-            query_embedding, query_text = generate_query("image", image_content) # TODO: include model parameter
+    if text_query is not None:
+        query_embedding, query_text = generate_text_embedding(text_query) # TODO: include model parameter
+    else:
+        if not image_file:
+            raise Exception("No image provided")
+        
+        try:
+            image_content = await image_file.read()
+            image_content = Image.open(BytesIO(image_content))
 
-        text_res = VecMgr.get_top_k_by_hybrid(TEXT_COLLECTION_NAME, query_text, query_embedding, top_k)
-        image_res = VecMgr.get_top_k_by_hybrid(IMAGE_COLLECTION_NAME, query_text, query_embedding, top_k)
+        except Exception as e:
+            return {f"error: {e}"}
+        
+        query_embedding, query_text = generate_image_embedding(image_content) # TODO: include model parameter
 
-        # TODO: include a cutoff for a certain score
+    text_res = VecMgr.get_top_k_by_hybrid(TEXT_COLLECTION_NAME, query_text, query_embedding, top_k)
+    image_res = VecMgr.get_top_k_by_hybrid(IMAGE_COLLECTION_NAME, query_text, query_embedding, top_k)
 
-        return {"text_results": text_res, "image_results": image_res}
+    # TODO: include a cutoff for a certain score
+
+    return {"text_results": text_res, "image_results": image_res}
     
-    except Exception as e:
-        return {f"Error handling query: {e}"}
 
 
 '''

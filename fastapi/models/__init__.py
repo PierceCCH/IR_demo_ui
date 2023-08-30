@@ -8,10 +8,8 @@ from models.ram import inference_ram
 from models.ram import inference_tag2text
 from models.ram import get_transform
 
-from PIL import Image
 import torch
 import os
-import io
 
 RAM_WEIGHTS = os.path.join(os.path.dirname(__file__), 'weights/ram_swin_large_14m.pth')
 T2T_WEIGHTS = os.path.join(os.path.dirname(__file__), 'weights/tag2text_swin_14m.pth')
@@ -46,37 +44,26 @@ def resize(image):
     w, h = image.size
     return image.resize((w//3, h//3))
 
-def generate_caption(ram, t2t, image_path, device):
+def generate_caption(image, ram, t2t, device):
     try:
-        image = resize(Image.open(image_path))
         transform = get_transform(image_size=IMAGE_SIZE)
         image = transform(image).unsqueeze(0).to(device)
 
         tags = inference_ram(image, ram)
         _, _, caption = inference_tag2text(image, t2t, tags) # [Model identified tags, RAM generated tags, caption]
 
-        # concat generated tags with caption
-        res = caption + ' ' + tags.replace(' |', '')
-
-        print(f"Generated text for {image_path}")
-        return res
+        return caption
     
     except Exception as e:
         raise ValueError(f"Error generating caption: {e}")
 
-def generate_query(modality: str, query, model=align_model, ram=ram_model, t2t=t2t_model, device=device):
+# TODO: Have variable model select
+def generate_image_embedding(query, model=align_model, ram=ram_model, t2t=t2t_model, device=device):
+    caption = generate_caption(query, ram, t2t, device)
+    return model.get_single_image_embedding(query), caption
     
-    # TODO: Have variable model select
-
-    if modality == "image":
-        image = Image.open(query).convert('RGB')
-        caption = generate_caption(ram, t2t, image, device)
-        return model.get_single_image_embedding(image), caption
+# TODO: Have variable model select
+def generate_text_embedding(query, model=align_model):
+    return model.get_single_text_embedding(query), query
     
-    elif modality == "text":
-        return model.get_single_text_embedding(query), query
-    
-    else:
-        raise ValueError(f"Invalid modality: {modality}")
-
 print("Models loaded") # TODO: Replace with logger

@@ -1,9 +1,11 @@
 from PIL import Image
 
 import streamlit as st
+import logging
 import requests
 import json
 import os
+import copy
 
 # Define FastAPI endpoint
 BACKEND = "http://fastapi:8000/query_top_k_documents"
@@ -34,31 +36,48 @@ if page == "Search":
             text_input = None
             image_file = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
 
+            if image_file is not None:
+                image_copy = copy.deepcopy(image_file)
+                try:
+                    img = Image.open(image_copy)
+                    st.image(img, caption="Query image", width=300)
+                except OSError:
+                    st.error("Invalid image file. Please upload a valid image file.")
+                    image_file = None
+
     with config_col:
         st.subheader("Configuration")
         model = st.selectbox("Select model", ["ALIGN", "ALIGN + MLP", "ALIGN + Hybrid", "ALIGN + Hybrid + Split"])
         num_results = st.slider("Number of results per modality", min_value=1, max_value=25, value=10)
+        alpha = st.select_slider(
+                "Weight of BM25 or vector search. 0 for pure keyword search, 1 for pure vector search.", 
+                options=[str(i/4) for i in range(5)], 
+                value='0.5')
+
+        
         request_body = {
-            "query": text_input, 
+            "text_query": text_input, 
             "top_k": num_results, 
-            "model": model
+            "model": model,
+            "alpha": float(alpha)
         }
 
         if st.button("Submit query"):
             with st.spinner("Sending query to FastAPI endpoint..."):
                 try:
-                    if image_file is not None:
+                    if image_file is not None: # Image query
                         files = {
                             "image_file": image_file
                         }
                         response = requests.post(BACKEND, params=request_body, files=files)
-                        st.write(response.json())
-                    elif len(text_input) > 0:
+                    elif len(text_input) > 0: # Text query
                         response = requests.post(BACKEND, params=request_body)
                     else:
                         st.error("No input provided.")
                 except requests.exceptions.ConnectionError:
                     st.error("Connection error. Is the backend running?")
+                except requests.exceptions.HTTPError as e:
+                    st.error("HTTP error. Is the backend running?")
 
     st.divider()
 
@@ -99,7 +118,10 @@ if page == "Search":
                         st.image(img, caption=caption, use_column_width=True)
 
         except NameError:
-            st.write("No results yet.")
+            st.write("No results yet. Send a query to display results.")
+        
+        except (TypeError, AttributeError) as e:
+            st.error(f"Something went terribly wrong: {e}")
 
 
 elif page == "Articles":
