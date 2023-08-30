@@ -30,8 +30,8 @@ View the demo at http://localhost:8501. FastAPI docs can be viewed at http://loc
 
 # Todos:
 - [ ] Build demo frontend to include:
-    - [ ] Image query search
     - [ ] Model selection 
+    - [x] Image query search
     - [x] Text query search
     - [x] Top k selection
     - [x] Browse everything in database

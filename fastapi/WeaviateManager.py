@@ -397,7 +397,7 @@ class VectorManager:
         except Exception as e:
             return {'response': f'{e}'}
         
-    def get_top_k_by_hybrid(self, collection_name: str, query_string: str, target_embedding: Union[list, numpy.ndarray, torch.Tensor], top_k: int = 1) -> dict:
+    def get_top_k_by_hybrid(self, collection_name: str, query_string: str, target_embedding: Union[list, numpy.ndarray, torch.Tensor], top_k: int = 1, alpha: int = 0.5) -> dict:
         """
         Return the dictionary with the response key holding the list of near documents
 
@@ -411,6 +411,7 @@ class VectorManager:
                             example: torch.Tensor([0.5766745, 0.9341823, 0.7021697, 0.54776406, 0.013553977])
         top_k:              integer value for the number of documents to return. Default is 1
                             example: 3
+        alpha:              Weight of BM25 or vector search. 0 for pure keyword search, 1 for pure vector search. Default is 0.5
 
         RETURNS: 
         ------------------------------------
@@ -440,7 +441,7 @@ class VectorManager:
                .with_hybrid(
                     query_string,
                     vector=query_vector, 
-                    alpha=0.5, # An alpha of 1 is pure vector search, 0 is pure keyword search
+                    alpha=alpha,
                     properties = ["text"]
                 )
                .with_additional(["score"])

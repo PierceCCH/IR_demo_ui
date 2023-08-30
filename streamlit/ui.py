@@ -14,6 +14,14 @@ BACKEND = "http://fastapi:8000/query_top_k_documents"
 ARTICLES_PATH = "../data/m2e2/article"
 IMAGES_PATH = "../data/m2e2/image/image"
 
+# Define model options
+model_options = {
+    "ALIGN": 0,
+    "ALIGN + MLP": 1,
+    "ALIGN + Hybrid": 2,
+    "ALIGN + Hybrid + Split": 3
+}
+
 # sidebar for navigation
 st.sidebar.title("Navigation")
 page = st.sidebar.radio("Go to", ("Search", "Articles", "Images", "Documentation"))
@@ -48,17 +56,21 @@ if page == "Search":
     with config_col:
         st.subheader("Configuration")
         model = st.selectbox("Select model", ["ALIGN", "ALIGN + MLP", "ALIGN + Hybrid", "ALIGN + Hybrid + Split"])
-        num_results = st.slider("Number of results per modality", min_value=1, max_value=25, value=10)
-        alpha = st.select_slider(
-                "Weight of BM25 or vector search. 0 for pure keyword search, 1 for pure vector search.", 
-                options=[str(i/4) for i in range(5)], 
-                value='0.5')
 
+        if model_options[model] == 3:
+            num_results = st.slider("Number of results per modality", min_value=1, max_value=20, value=10)
+            alpha = st.select_slider(
+                    "Weight of BM25 or vector search. 0 for pure keyword search, 1 for pure vector search.", 
+                    options=[str(i/4) for i in range(5)], 
+                    value='0.5')
+        else:
+            num_results = st.slider("Number of results", min_value=1, max_value=25, value=10)
+            alpha = '0'
         
         request_body = {
             "text_query": text_input, 
             "top_k": num_results, 
-            "model": model,
+            "model": model_options[model],
             "alpha": float(alpha)
         }
 
@@ -81,47 +93,48 @@ if page == "Search":
 
     st.divider()
 
-    with st.spinner("Waiting for results..."):
-        text_results_col, image_results_col = st.columns(2, gap="large")
+    if model_options[model] == 3:
+        with st.spinner("Waiting for results..."):
+            text_results_col, image_results_col = st.columns(2, gap="large")
 
-        try:
-            text_results = response.json().get("text_results")['response']
-            image_results = response.json().get("image_results")['response']
+            try:
+                text_results = response.json().get("text_results")['response']
+                image_results = response.json().get("image_results")['response']
 
-            # Display retrieved articles
-            with text_results_col:
-                st.subheader("Text results:")
-                for article in text_results:
-                    document = article['response']['properties']
-                    doc_id = document['doc_id']
-                    article_path = document['article']
-                    score = article['score']
-                    text = document['text']
-
-                    with st.expander(f"ID: {doc_id} | {article_path} | Score: {score[:5]}"):
-                        st.write(text)
-            
-            # Display retrieved images
-            with image_results_col:
-                st.subheader("Image results:")
-                tabs = st.tabs([f"Image {str(i+1)}" for i in range(len(image_results))])
-                for i, tab in enumerate(tabs):
-                    with tab:
-                        document = image_results[i]['response']['properties']
-                        score = image_results[i]['score']
+                # Display retrieved articles
+                with text_results_col:
+                    st.subheader("Text results:")
+                    for article in text_results:
+                        document = article['response']['properties']
                         doc_id = document['doc_id']
-                        image = document['image']
-                        caption = document['text']
+                        article_path = document['article']
+                        score = article['score']
+                        text = document['text']
 
-                        st.subheader(f"ID: {doc_id} | Score: {score[:5]}")
-                        img = Image.open(os.path.join(IMAGES_PATH, image))
-                        st.image(img, caption=caption, use_column_width=True)
+                        with st.expander(f"ID: {doc_id} | {article_path} | Score: {score[:5]}"):
+                            st.write(text)
+                
+                # Display retrieved images
+                with image_results_col:
+                    st.subheader("Image results:")
+                    tabs = st.tabs([f"Image {str(i+1)}" for i in range(len(image_results))])
+                    for i, tab in enumerate(tabs):
+                        with tab:
+                            document = image_results[i]['response']['properties']
+                            score = image_results[i]['score']
+                            doc_id = document['doc_id']
+                            image = document['image']
+                            caption = document['text']
 
-        except NameError:
-            st.write("No results yet. Send a query to display results.")
-        
-        except (TypeError, AttributeError) as e:
-            st.error(f"Something went terribly wrong: {e}")
+                            st.subheader(f"ID: {doc_id} | Score: {score[:5]}")
+                            img = Image.open(os.path.join(IMAGES_PATH, image))
+                            st.image(img, caption=caption, use_column_width=True)
+
+            except NameError:
+                st.write("No results yet. Send a query to display results.")
+            
+            except (TypeError, AttributeError) as e:
+                st.error(f"Something went terribly wrong: {e}")
 
 
 elif page == "Articles":

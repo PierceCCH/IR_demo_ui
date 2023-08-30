@@ -1,5 +1,5 @@
 from WeaviateManager import VectorManager
-from models import generate_image_embedding, generate_text_embedding
+from models import generate_image_query, generate_text_query
 from typing import Optional
 from PIL import Image
 from io import BytesIO
@@ -15,10 +15,6 @@ app = FastAPI(
 
 VecMgr = VectorManager()
 
-TEXT_COLLECTION_NAME = 'ALIGN_M2E2_articles'
-IMAGE_COLLECTION_NAME = 'ALIGN_M2E2_images'
-
-
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
@@ -27,7 +23,7 @@ def read_root():
 Querying
 """
 @app.post("/query_top_k_documents")
-async def query_top_k_documents(text_query: Optional[str] = None, top_k: int = 10, image_file: Optional[UploadFile] = None, model: str = "ALIGN", alpha: float = 0.5):
+async def query_top_k_documents(text_query: Optional[str] = None, top_k: int = 10, image_file: Optional[UploadFile] = None, model: int = 0, alpha: float = 0.5):
     """
     Queries both article and image collections in the vector database for the top k documents of each collection most similar to the query.
     
@@ -42,9 +38,9 @@ async def query_top_k_documents(text_query: Optional[str] = None, top_k: int = 1
     image_file (Optional[UploadFile]): 
                     Image file. Required only for image query.
 
-    model (str):    
+    model (int):    
                     Model to use for query. 
-                    Options are "ALIGN", "ALIGN + MLP", "ALIGN + Hybrid", "ALIGN + Hybrid + Split".
+                    0 for ALIGN, 1 for ALIGN + MLP, 2 for ALIGN + Hybrid, 3 for ALIGN + Hybrid + Split.
 
     alpha (float):  
                     Weight of BM25 or vector search. 
@@ -71,10 +67,10 @@ async def query_top_k_documents(text_query: Optional[str] = None, top_k: int = 1
                             ...
                         ]
                     }
-
     """
     if text_query is not None:
-        query_embedding, query_text = generate_text_embedding(text_query) # TODO: include model parameter
+        query_embedding, query_text = generate_text_query(text_query, model)
+
     else:
         if not image_file:
             raise Exception("No image provided")
@@ -85,15 +81,30 @@ async def query_top_k_documents(text_query: Optional[str] = None, top_k: int = 1
 
         except Exception as e:
             return {f"error: {e}"}
-        
-        query_embedding, query_text = generate_image_embedding(image_content) # TODO: include model parameter
+        query_embedding, query_text = generate_image_query(image_content, model)
 
-    text_res = VecMgr.get_top_k_by_hybrid(TEXT_COLLECTION_NAME, query_text, query_embedding, top_k)
-    image_res = VecMgr.get_top_k_by_hybrid(IMAGE_COLLECTION_NAME, query_text, query_embedding, top_k)
+    if model == 0:
+        raise NotImplementedError("ALIGN model not implemented yet")
+    
+    elif model == 1:
+        raise NotImplementedError("ALIGN + MLP model not implemented yet")
+    
+    elif model == 2:
+        raise NotImplementedError("ALIGN + Hybrid model not implemented yet")
+    
+    elif model == 3:
+        TEXT_COLLECTION_NAME = 'ALIGN_M2E2_articles'
+        IMAGE_COLLECTION_NAME = 'ALIGN_M2E2_images'
 
-    # TODO: include a cutoff for a certain score
+        text_res = VecMgr.get_top_k_by_hybrid(TEXT_COLLECTION_NAME, query_text, query_embedding, top_k, alpha)
+        image_res = VecMgr.get_top_k_by_hybrid(IMAGE_COLLECTION_NAME, query_text, query_embedding, top_k, alpha)
 
-    return {"text_results": text_res, "image_results": image_res}
+        # TODO: include a cutoff for a certain score
+
+        return {"text_results": text_res, "image_results": image_res}
+
+    else:
+        raise Exception("Invalid model choice")
     
 
 
