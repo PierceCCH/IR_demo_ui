@@ -57,7 +57,7 @@ if page == "Search":
         st.subheader("Configuration")
         model = st.selectbox("Select model", ["ALIGN", "ALIGN + MLP", "ALIGN + Hybrid", "ALIGN + Hybrid + Split"])
 
-        if model_options[model] == 3:
+        if model_options[model] == 2 or model_options[model] == 3:
             num_results = st.slider("Number of results per modality", min_value=1, max_value=20, value=10)
             alpha = st.select_slider(
                     "Weight of BM25 or vector search. 0 for pure keyword search, 1 for pure vector search.", 
@@ -95,15 +95,23 @@ if page == "Search":
 
     if model_options[model] == 3:
         with st.spinner("Waiting for results..."):
-            text_results_col, image_results_col = st.columns(2, gap="large")
-
             try:
                 text_results = response.json().get("text_results")['response']
                 image_results = response.json().get("image_results")['response']
+                
+                # if response json contains query_text
+                query_text = response.json().get("query_text")
+                if query_text is not None:
+                    st.write(f"Generated image caption: {query_text}")
+
+                text_results_col, image_results_col = st.columns(2, gap="large")
 
                 # Display retrieved articles
                 with text_results_col:
                     st.subheader("Text results:")
+                    if len(text_results) == 0:
+                        st.write("No results found.")
+
                     for article in text_results:
                         document = article['response']['properties']
                         doc_id = document['doc_id']
@@ -117,6 +125,9 @@ if page == "Search":
                 # Display retrieved images
                 with image_results_col:
                     st.subheader("Image results:")
+                    if len(image_results) == 0:
+                        st.write("No results found.")
+
                     tabs = st.tabs([f"Image {str(i+1)}" for i in range(len(image_results))])
                     for i, tab in enumerate(tabs):
                         with tab:
@@ -135,6 +146,26 @@ if page == "Search":
             
             except (TypeError, AttributeError) as e:
                 st.error(f"Something went terribly wrong: {e}")
+    else:
+        st.write("TODO: Add results display for other models")
+        # with st.spinner("Waiting for results..."):
+        #     try:
+        #         results = response.json().get("results")['response']
+        #         st.subheader("Results:")
+        #         for result in results:
+        #             document = result['response']['properties']
+        #             doc_id = document['doc_id']
+        #             article_path = document['article']
+        #             score = result['score']
+        #             text = document['text']
+
+        #             with st.expander(f"ID: {doc_id} | {article_path} | Score: {score[:5]}"):
+        #                 st.write(text)
+
+        #     except NameError:
+        #         st.write("No results yet. Send a query to display results.")
+        #     except (TypeError, AttributeError) as e:
+        #         st.error(f"Something went terribly wrong: {e}")
 
 
 elif page == "Articles":
