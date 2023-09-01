@@ -16,9 +16,8 @@ IMAGES_PATH = "../data/m2e2/image/image"
 
 # Define model options
 model_options = {
-    "ALIGN": 0,
     "ALIGN + MLP": 1,
-    "ALIGN + Hybrid": 2,
+    "ALIGN + MLP + Hybrid": 2,
     "ALIGN + Hybrid + Split": 3
 }
 
@@ -55,7 +54,7 @@ if page == "Search":
 
     with config_col:
         st.subheader("Configuration")
-        model = st.selectbox("Select model", ["ALIGN", "ALIGN + MLP", "ALIGN + Hybrid", "ALIGN + Hybrid + Split"])
+        model = st.selectbox("Select model", ["ALIGN + MLP", "ALIGN + MLP + Hybrid", "ALIGN + Hybrid + Split"])
 
         if model_options[model] == 2 or model_options[model] == 3:
             num_results = st.slider("Number of results per modality", min_value=1, max_value=20, value=10)
@@ -147,25 +146,39 @@ if page == "Search":
             except (TypeError, AttributeError) as e:
                 st.error(f"Something went terribly wrong: {e}")
     else:
-        st.write("TODO: Add results display for other models")
-        # with st.spinner("Waiting for results..."):
-        #     try:
-        #         results = response.json().get("results")['response']
-        #         st.subheader("Results:")
-        #         for result in results:
-        #             document = result['response']['properties']
-        #             doc_id = document['doc_id']
-        #             article_path = document['article']
-        #             score = result['score']
-        #             text = document['text']
+        # models 1 and 2
+        with st.spinner("Waiting for results..."):
+            try:
+                results = response.json().get("results")['response']
+                st.subheader("Results:")
+                for i, result in enumerate(results):
+                    if model_options[model] == 1:
+                        score = result['certainty']
+                    elif model_options[model] == 2:
+                        score = result['score']
+                    else:
+                        raise ValueError(f"Invalid model option: {model_options[model]}")
+            
+                    document = result['response']['properties']
+                    doc_id = document['doc_id']
+                    content_path = document['content_path']
+                    text = document['text']
 
-        #             with st.expander(f"ID: {doc_id} | {article_path} | Score: {score[:5]}"):
-        #                 st.write(text)
+                    with st.expander(f"ID: {doc_id} | {content_path} | Score: {score}"):
+                        if os.path.exists(os.path.join(IMAGES_PATH, content_path)):
+                            image = Image.open(os.path.join(IMAGES_PATH, content_path))
+                            st.image(image, caption=text, width=500)
 
-        #     except NameError:
-        #         st.write("No results yet. Send a query to display results.")
-        #     except (TypeError, AttributeError) as e:
-        #         st.error(f"Something went terribly wrong: {e}")
+                        elif os.path.exists(os.path.join(ARTICLES_PATH, content_path)):
+                            with open(os.path.join(ARTICLES_PATH, content_path), "r") as f:
+                                st.write(f.read())
+                        else:
+                            st.write("No content available.")
+
+            except NameError:
+                st.write("No results yet. Send a query to display results.")
+            except (TypeError, AttributeError) as e:
+                st.error(f"Something went terribly wrong: {e}")
 
 
 elif page == "Articles":

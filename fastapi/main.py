@@ -83,27 +83,17 @@ async def query_top_k_documents(text_query: Optional[str] = None, top_k: int = 1
             return {f"error: {e}"}
         query_embedding, query_text = generate_image_query(image_content, model)
 
-    if model == 0:
-        raise NotImplementedError("ALIGN model not implemented yet")
-        # COLLECTION_NAME = 'ALIGN_M2E2_articles_images'
-        # res = VecMgr.get_top_k(COLLECTION_NAME, query_embedding, top_k)
+    if model == 1:
+        COLLECTION_NAME = 'ALIGN_MLP_M2E2'
+        res = VecMgr.get_top_k(COLLECTION_NAME, query_embedding, top_k)
 
-        # return {"results": res}
-    
-    elif model == 1:
-        raise NotImplementedError("ALIGN + MLP model not implemented yet")
-        # COLLECTION_NAME = 'ALIGN_MLP_M2E2_articles_images'
-        # res = VecMgr.get_top_k(COLLECTION_NAME, query_embedding, top_k)
-
-        # return {"results": res}
+        return {"results": res}
     
     elif model == 2:
-        raise NotImplementedError("ALIGN + Hybrid model not implemented yet")
-        # COLLECTION_NAME = 'ALIGN_Hybrid_M2E2_articles_images'
-        # text_res = VecMgr.get_top_k_by_hybrid(TEXT_COLLECTION_NAME, query_text, query_embedding, top_k, alpha)
-        # image_res = VecMgr.get_top_k_by_hybrid(IMAGE_COLLECTION_NAME, query_text, query_embedding, top_k, alpha)
+        COLLECTION_NAME = 'ALIGN_MLP_M2E2'
+        res = VecMgr.get_top_k_by_hybrid(COLLECTION_NAME, query_text, query_embedding, top_k, alpha)
 
-        # return {"text_results": text_res, "image_results": image_res, "query_text": query_text}
+        return {"results": res}
     
     elif model == 3:
         TEXT_COLLECTION_NAME = 'ALIGN_M2E2_articles'
@@ -111,8 +101,6 @@ async def query_top_k_documents(text_query: Optional[str] = None, top_k: int = 1
 
         text_res = VecMgr.get_top_k_by_hybrid(TEXT_COLLECTION_NAME, query_text, query_embedding, top_k, alpha)
         image_res = VecMgr.get_top_k_by_hybrid(IMAGE_COLLECTION_NAME, query_text, query_embedding, top_k, alpha)
-
-        # TODO: include a cutoff for a certain score
 
         return {"text_results": text_res, "image_results": image_res, "query_text": query_text}
 

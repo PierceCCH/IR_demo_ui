@@ -32,8 +32,7 @@ $ ./start.sh
 View the demo at http://localhost:8501. FastAPI docs can be viewed at http://localhost:8000/docs.
 
 # Todos:
-- [ ] Model selection 
-- [ ] Logging and error handling
+- [ ] Better logging and error handling
 
 
 # Architecture
