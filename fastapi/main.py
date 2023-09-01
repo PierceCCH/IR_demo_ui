@@ -48,7 +48,7 @@ async def query_top_k_documents(text_query: Optional[str] = None, top_k: int = 1
 
     RETURNS: 
     ------------------------------------
-        dict:       Dictionary of results or error.
+        dict:       Dictionary of results or error. If hybrid search is involved, query text is also returned
                     example: {
                         "text_results": [
                             {
@@ -65,7 +65,8 @@ async def query_top_k_documents(text_query: Optional[str] = None, top_k: int = 1
                                 "image": image
                             },
                             ...
-                        ]
+                        ],
+                        "query_text": query_text
                     }
     """
     if text_query is not None:
@@ -81,7 +82,7 @@ async def query_top_k_documents(text_query: Optional[str] = None, top_k: int = 1
 
         except Exception as e:
             return {f"error: {e}"}
-        query_embedding, query_text = generate_image_query(image_content, model)
+        query_embedding, query_text = generate_image_query(image_content)
 
     if model == 1:
         COLLECTION_NAME = 'ALIGN_MLP_M2E2'
@@ -93,7 +94,7 @@ async def query_top_k_documents(text_query: Optional[str] = None, top_k: int = 1
         COLLECTION_NAME = 'ALIGN_MLP_M2E2'
         res = VecMgr.get_top_k_by_hybrid(COLLECTION_NAME, query_text, query_embedding, top_k, alpha)
 
-        return {"results": res}
+        return {"results": res, "query_text": query_text}
     
     elif model == 3:
         TEXT_COLLECTION_NAME = 'ALIGN_M2E2_articles'

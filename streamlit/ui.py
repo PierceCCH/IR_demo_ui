@@ -1,7 +1,6 @@
 from PIL import Image
 
 import streamlit as st
-import logging
 import requests
 import json
 import os
@@ -23,12 +22,12 @@ model_options = {
 
 # sidebar for navigation
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ("Search", "Articles", "Images", "Documentation"))
+page = st.sidebar.radio("Go to", ("Search", "Articles", "Images"))
 
 
 if page == "Search":
     st.title("Multi-modal search demo")
-    st.write("Query a vector database for related documents and images.") # TODO: Add description
+    st.write("Query a vector database for related documents and images.")
 
     inputs_col, config_col = st.columns(2, gap="large")
 
@@ -150,7 +149,12 @@ if page == "Search":
         with st.spinner("Waiting for results..."):
             try:
                 results = response.json().get("results")['response']
+                query_text = response.json().get("query_text")
+
                 st.subheader("Results:")
+                if query_text is not None:
+                    st.write(f"Generated image caption: {query_text}")
+                    
                 for i, result in enumerate(results):
                     if model_options[model] == 1:
                         score = result['certainty']
@@ -236,11 +240,6 @@ elif page == "Images":
                     st.write(caption)
                 except KeyError:
                     st.write("No caption available.")
-
-elif page == "Documentation":
-    st.title("Documentation")
-    st.subheader("This is a demo for the Multi-modal Search project.")
-    st.write("TODO: Add documentation")
 
 else:
     st.error("Something went wrong. You're not supposed to be here!")

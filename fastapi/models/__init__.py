@@ -33,7 +33,7 @@ ram_model.eval()
 # T2T
 t2t_model = tag2text(pretrained=T2T_WEIGHTS, image_size=IMAGE_SIZE, vit='swin_b')
 t2t_model = t2t_model.to(device)
-t2t_model.threshold = 0.68
+t2t_model.threshold = 0.68 # value used in original repo
 t2t_model.eval()
 
 
@@ -113,4 +113,4 @@ def generate_text_query(query, model):
     else:
         raise KeyError("Invalid model selection")
 
-print("Models loaded") # TODO: Replace with logger
+print("Models loaded")
