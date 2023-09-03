@@ -71,6 +71,7 @@ async def query_top_k_documents(text_query: Optional[str] = None, top_k: int = 1
     """
     if text_query is not None:
         query_embedding, query_text = generate_text_query(text_query, model)
+        tags = None
 
     else:
         if not image_file:
@@ -82,9 +83,15 @@ async def query_top_k_documents(text_query: Optional[str] = None, top_k: int = 1
 
         except Exception as e:
             return {f"error: {e}"}
-        query_embedding, query_text = generate_image_query(image_content)
+        query_embedding, query_text, tags = generate_image_query(image_content, model)
 
-    if model == 1:
+    if model == 0:
+        COLLECTION_NAME = 'ALIGN_M2E2'
+        res = VecMgr.get_top_k(COLLECTION_NAME, query_embedding, top_k)
+        
+        return {"results": res}
+
+    elif model == 1:
         COLLECTION_NAME = 'ALIGN_MLP_M2E2'
         res = VecMgr.get_top_k(COLLECTION_NAME, query_embedding, top_k)
 
@@ -94,7 +101,7 @@ async def query_top_k_documents(text_query: Optional[str] = None, top_k: int = 1
         COLLECTION_NAME = 'ALIGN_MLP_M2E2'
         res = VecMgr.get_top_k_by_hybrid(COLLECTION_NAME, query_text, query_embedding, top_k, alpha)
 
-        return {"results": res, "query_text": query_text}
+        return {"results": res, "query_text": query_text, "image_tags": tags}
     
     elif model == 3:
         TEXT_COLLECTION_NAME = 'ALIGN_M2E2_articles'
@@ -103,7 +110,7 @@ async def query_top_k_documents(text_query: Optional[str] = None, top_k: int = 1
         text_res = VecMgr.get_top_k_by_hybrid(TEXT_COLLECTION_NAME, query_text, query_embedding, top_k, alpha)
         image_res = VecMgr.get_top_k_by_hybrid(IMAGE_COLLECTION_NAME, query_text, query_embedding, top_k, alpha)
 
-        return {"text_results": text_res, "image_results": image_res, "query_text": query_text}
+        return {"text_results": text_res, "image_results": image_res, "query_text": query_text, "image_tags": tags}
 
     else:
         raise Exception("Invalid model choice")

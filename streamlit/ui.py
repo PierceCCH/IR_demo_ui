@@ -15,6 +15,7 @@ IMAGES_PATH = "../data/m2e2/image/image"
 
 # Define model options
 model_options = {
+    "ALIGN": 0,
     "ALIGN + MLP": 1,
     "ALIGN + MLP + Hybrid": 2,
     "ALIGN + Hybrid + Split": 3
@@ -53,7 +54,7 @@ if page == "Search":
 
     with config_col:
         st.subheader("Configuration")
-        model = st.selectbox("Select model", ["ALIGN + MLP", "ALIGN + MLP + Hybrid", "ALIGN + Hybrid + Split"])
+        model = st.selectbox("Select model", ["ALIGN", "ALIGN + MLP", "ALIGN + MLP + Hybrid", "ALIGN + Hybrid + Split"])
 
         if model_options[model] == 2 or model_options[model] == 3:
             num_results = st.slider("Number of results per modality", min_value=1, max_value=20, value=10)
@@ -99,7 +100,7 @@ if page == "Search":
                 
                 # if response json contains query_text
                 query_text = response.json().get("query_text")
-                if query_text is not None:
+                if modality == "Image" and query_text is not None:
                     st.write(f"Generated image caption: {query_text}")
 
                 text_results_col, image_results_col = st.columns(2, gap="large")
@@ -150,13 +151,15 @@ if page == "Search":
             try:
                 results = response.json().get("results")['response']
                 query_text = response.json().get("query_text")
+                image_tags = response.json().get('image_tags')
 
                 st.subheader("Results:")
                 if query_text is not None:
                     st.write(f"Generated image caption: {query_text}")
+                    st.write(f"Image tags: {image_tags}")
                     
                 for i, result in enumerate(results):
-                    if model_options[model] == 1:
+                    if model_options[model] == 0 or model_options[model] == 1:
                         score = result['certainty']
                     elif model_options[model] == 2:
                         score = result['score']

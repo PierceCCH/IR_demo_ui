@@ -57,17 +57,20 @@ def generate_caption(image) -> str:
     tags = inference_ram(image, ram_model)
     _, _, caption = inference_tag2text(image, t2t_model, tags) # [Model identified tags, RAM generated tags, caption]
 
-    return caption
+    return caption, tags
     
 
-def generate_image_query(query):
+def generate_image_query(query, model):
     """
-    Generate image query from image using the specified model. Image embedding generation is model agnostic and is done by the ALIGN model.
+    Generate image query from image using the specified model.
 
     INPUT:
     ------------------------------------
     query (PIL.Image):
                         Query image.
+    
+    model (int):
+                        Model to use for query. If model involved hybrid search, a caption will be generated.
 
     RETURNS:
     ------------------------------------
@@ -79,8 +82,12 @@ def generate_image_query(query):
 
     """
 
-    caption = generate_caption(query)
-    return align_model.get_single_image_embedding(query), caption
+    if model == 2 or model == 3:
+        caption, tags = generate_caption(query)
+    else:
+        caption = None
+        tags = None
+    return align_model.get_single_image_embedding(query), caption, tags
     
 
 def generate_text_query(query, model):
@@ -105,10 +112,10 @@ def generate_text_query(query, model):
     query (str):
                         Query text.
     """
-
     if model == 1 or model == 2:
-        return mlp_model(torch.tensor(align_model.get_single_text_embedding(query))), query
-    elif model == 3:
+        tensor = mlp_model(torch.tensor(align_model.get_single_text_embedding(query))).detach().cpu().numpy()
+        return tensor, query
+    elif model == 0 or model == 3:
         return align_model.get_single_text_embedding(query), query
     else:
         raise KeyError("Invalid model selection")

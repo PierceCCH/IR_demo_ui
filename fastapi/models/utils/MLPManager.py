@@ -20,4 +20,4 @@ class MLPManager(torch.nn.Module):
     x = self.linear_out(x)
     x = self.tanh(x)
     
-    return x.detach().cpu().numpy()
+    return x
