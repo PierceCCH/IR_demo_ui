@@ -259,7 +259,8 @@ class VectorManager:
 
     def batch_create_documents(self, collection_name: str, documents: Union[list, dict]) -> dict:
         """
-        Batch create documents in a specified collection to reduce the time taken to create a large set of documents
+        Batch create documents in a specified collection to reduce the time taken to create a large set of documents.
+        If any documents already exists, it will be skipped and the id will be returned in the response.
 
         INPUT: 
         ------------------------------------
@@ -289,6 +290,8 @@ class VectorManager:
             callback = weaviate.util.check_batch_result
         )
 
+        existing_documents = []
+
         with self._client.batch as batch:
             for i, doc in enumerate(documents):
                 embedding=None
@@ -298,7 +301,8 @@ class VectorManager:
                 # Check if the id exist
                 id_exists = self._exists(collection_name, doc['doc_id'])
                 if id_exists:
-                    return {'response': f'This id ({doc["doc_id"]}) already exists, please use update instead'}
+                    existing_documents.append(doc['doc_id'])
+                    continue
                 
                 if "vector" in doc:
                     valid_vec_type = [numpy.ndarray, torch.Tensor, list]
@@ -317,7 +321,7 @@ class VectorManager:
                     else:
                         return {'response': f"{e}"}
                     
-        return {'response': "200"}
+        return {'response': "200", 'existing_documents': existing_documents}
 
 
     def read_document(self, collection_name: str, doc_id: str) -> dict:

@@ -7,7 +7,6 @@ services:
       - deploy_network
     ports:
       - ${WEAVIATE_H_PORT}:${WEAVIATE_C_PORT}
-      - ${PROMETHEUS_H_PORT}:${PROMETHEUS_C_PORT}
     restart: on-failure:0
     volumes:
       - ../vector_db/var/weaviate:/var/lib/weaviate

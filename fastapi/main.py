@@ -6,11 +6,18 @@ from io import BytesIO
 
 from fastapi import FastAPI, UploadFile
 
+COLLECTIONS = {
+    0: 'ALIGN_M2E2',
+    1: 'ALIGN_MLP_M2E2',
+    2: 'ALIGN_MLP_M2E2',
+    3: {'text': 'ALIGN_M2E2_articles', 
+        'image': 'ALIGN_M2E2_images'}
+}
+
 app = FastAPI(
     title="Multi-modal search demo",
     description="""Query a vector database for related documents and images.
                            Visit this URL at port 8501 for the streamlit interface.""",
-    version="0.1.0",
 )
 
 VecMgr = VectorManager()
@@ -84,28 +91,27 @@ async def query_top_k_documents(text_query: Optional[str] = None, top_k: int = 1
         except Exception as e:
             return {f"error: {e}"}
         query_embedding, query_text, tags = generate_image_query(image_content, model)
+    
+    COLLECTION_NAME = COLLECTIONS[model]
 
     if model == 0:
-        COLLECTION_NAME = 'ALIGN_M2E2'
         res = VecMgr.get_top_k(COLLECTION_NAME, query_embedding, top_k)
         
         return {"results": res}
 
     elif model == 1:
-        COLLECTION_NAME = 'ALIGN_MLP_M2E2'
         res = VecMgr.get_top_k(COLLECTION_NAME, query_embedding, top_k)
 
         return {"results": res}
     
     elif model == 2:
-        COLLECTION_NAME = 'ALIGN_MLP_M2E2'
         res = VecMgr.get_top_k_by_hybrid(COLLECTION_NAME, query_text, query_embedding, top_k, alpha)
 
         return {"results": res, "query_text": query_text, "image_tags": tags}
     
     elif model == 3:
-        TEXT_COLLECTION_NAME = 'ALIGN_M2E2_articles'
-        IMAGE_COLLECTION_NAME = 'ALIGN_M2E2_images'
+        TEXT_COLLECTION_NAME = COLLECTION_NAME['text']
+        IMAGE_COLLECTION_NAME = COLLECTION_NAME['image']
 
         text_res = VecMgr.get_top_k_by_hybrid(TEXT_COLLECTION_NAME, query_text, query_embedding, top_k, alpha)
         image_res = VecMgr.get_top_k_by_hybrid(IMAGE_COLLECTION_NAME, query_text, query_embedding, top_k, alpha)
