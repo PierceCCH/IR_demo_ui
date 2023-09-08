@@ -104,11 +104,11 @@ The demo uses a Weaviate vector database prepopulated with articles and images f
   </tbody>
 </table>
 
-2) Download the [pretrained weights](https://drive.google.com/file/d/1kaae6F6wEkZM8YrhYx00PVXTlmCrv192/view?usp=sharing) for the MLP and store them under fastapi/models/weights.
+2) [Download](https://drive.google.com/file/d/1kaae6F6wEkZM8YrhYx00PVXTlmCrv192/view?usp=sharing) the pretrained weights for the MLP and store them under fastapi/models/weights.
 
-3) Download a pre-populated Weaviate vector database from [here](https://drive.google.com/file/d/1GGdZn3qtQ7dRh0IlC-dFwX9C23756Qmz/view?usp=drive_link), unzip it and store it at the root of the project.
+3) [Download](https://drive.google.com/file/d/1GGdZn3qtQ7dRh0IlC-dFwX9C23756Qmz/view?usp=drive_link) a pre-populated Weaviate vector database, unzip it and store it at the root of the project.
 
-4) Download the M2E2 dataset from [here](http://blender.cs.illinois.edu/software/m2e2/) and store it under data/m2e2.
+4) [Download](http://blender.cs.illinois.edu/software/m2e2/) the M2E2 dataset from here and store it under data/m2e2.
 
 5) Build the docker image and start the containers.
 

@@ -98,11 +98,13 @@ if page == "Search":
             try:
                 text_results = response.json().get("text_results")['response']
                 image_results = response.json().get("image_results")['response']
+                image_tags = response.json().get('image_tags')
                 
                 # if response json contains query_text
                 query_text = response.json().get("query_text")
                 if modality == "Image" and query_text is not None:
                     st.write(f"Generated image caption: {query_text}")
+                    st.write(f"Image tags: {image_tags}")
 
                 text_results_col, image_results_col = st.columns(2, gap="large")
 
@@ -147,7 +149,7 @@ if page == "Search":
             except (TypeError, AttributeError) as e:
                 st.error(f"Something went terribly wrong: {e}")
     else:
-        # models 1 and 2
+        # models 0, 1 and 2
         with st.spinner("Waiting for results..."):
             try:
                 results = response.json().get("results")['response']
