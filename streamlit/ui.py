@@ -20,6 +20,7 @@ model_options = {
     "ALIGN + MLP + Hybrid": 2,
     "ALIGN + Hybrid + Split": 3
 }
+st.set_page_config(layout="wide")
 
 # sidebar for navigation
 st.sidebar.title("Navigation")
@@ -154,7 +155,7 @@ if page == "Search":
                 image_tags = response.json().get('image_tags')
 
                 st.subheader("Results:")
-                if query_text is not None:
+                if modality == 'Image' and query_text is not None:
                     st.write(f"Generated image caption: {query_text}")
                     st.write(f"Image tags: {image_tags}")
                     
