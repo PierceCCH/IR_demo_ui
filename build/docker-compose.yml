@@ -2,7 +2,7 @@ version: '3.4'
 
 services:
   weaviate:
-    image: semitechnologies/weaviate:${WEAVIATE_VERSION}
+    image: cr.weaviate.io/semitechnologies/weaviate:${WEAVIATE_VERSION}
     networks:
       - deploy_network
     ports:
